@@ -33,6 +33,7 @@
 import base64
 import urllib
 import datetime
+from base64 import b64encode
 
 import github.GithubObject
 import github.PaginatedList
