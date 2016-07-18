@@ -2002,6 +2002,63 @@ class Repository(github.GithubObject.CompletableGithubObject):
         )
         return status == 204
 
+    def update_file(self, path, message, content, sha,
+                    branch=github.GithubObject.NotSet,
+                    committer=github.GithubObject.NotSet,
+                    author=github.GithubObject.NotSet):
+        """This method updates a file in a repository
+        :calls: `PUT /repos/:owner/:repo/contents/:path <http://developer.github.com/v3/repos/contents#update-a-file>`_
+        :param path: string, Required. The content path.
+        :param message: string, Required. The commit message.
+        :param content: string, Required. The updated file content, Base64 encoded.
+        :param sha: string, Required. The blob SHA of the file being replaced.
+        :param branch: string. The branch name. Default: the repository’s default branch (usually master)
+        :rtype: {
+            'content': :class:`ContentFile <github.ContentFile.ContentFile>`:,
+            'commit': :class:`Commit <github.Commit.Commit>`}
+        """
+        assert isinstance(path, (str, unicode)),                   \
+            'path must be str/unicode object'
+        assert isinstance(message, (str, unicode)),                \
+            'message must be str/unicode object'
+        assert isinstance(content, (str, unicode)),                \
+            'content must be a str/unicode object'
+        assert isinstance(sha, (str, unicode)),                    \
+            'sha must be a str/unicode object'
+        assert branch is github.GithubObject.NotSet                \
+            or isinstance(branch, (str, unicode)),                 \
+            'branch must be a str/unicode object'
+        assert author is github.GithubObject.NotSet                \
+            or isinstance(author, github.InputGitAuthor),          \
+            'author must be a github.InputGitAuthor object'
+        assert committer is github.GithubObject.NotSet             \
+            or isinstance(committer, github.InputGitAuthor),       \
+            'committer must be a github.InputGitAuthor object'
+
+        if atLeastPython3:
+            content = b64encode(content.encode('utf-8')).decode('utf-8')
+        else:
+            content = b64encode(content)
+
+        put_parameters = {'message': message, 'content': content,
+                          'sha': sha}
+
+        if branch is not github.GithubObject.NotSet:
+            put_parameters['branch'] = branch
+        if author is not github.GithubObject.NotSet:
+            put_parameters["author"] = author._identity
+        if committer is not github.GithubObject.NotSet:
+            put_parameters["committer"] = committer._identity
+
+        headers, data = self._requester.requestJsonAndCheck(
+            "PUT",
+            self.url + "/contents" + path,
+            input=put_parameters
+        )
+
+        return {'commit': github.Commit.Commit(self._requester, headers, data, completed=True),
+                'content': github.ContentFile.ContentFile(self._requester, headers, data, completed=True)}
+
     def has_in_collaborators(self, collaborator):
         """
         :calls: `GET /repos/:owner/:repo/collaborators/:user <http://developer.github.com/v3/repos/collaborators>`_
